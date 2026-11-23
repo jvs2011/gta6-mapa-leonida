@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Mapa Leonida</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Leonida">
+<meta name="theme-color" content="#060a1b">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="map"></div>
+
+<!-- Barra superior: busca + filtros -->
+<div class="top">
+  <label class="search glass">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Buscar em Leonida" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+    <button id="qClear" class="x" type="button" aria-label="Limpar" hidden>×</button>
+  </label>
+  <button id="btnFilters" class="round glass" type="button" aria-label="Filtros">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+    <span id="filterBadge" class="badge" hidden></span>
+  </button>
+</div>
+<div id="results" class="results glass" hidden></div>
+
+<!-- Botões laterais -->
+<div class="side">
+  <button id="btnStyle" class="round glass" type="button" aria-label="Mapa dia/noite">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+  <button id="btnFound" class="round glass" type="button" aria-label="Ocultar encontrados">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  </button>
+  <button id="btnHome" class="round glass" type="button" aria-label="Ver mapa inteiro">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>
+  </button>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<!-- Detalhe do ponto -->
+<section id="sheet" class="sheet glass" aria-hidden="true">
+  <div class="grab"></div>
+  <div id="sheetBody"></div>
+</section>
+
+<!-- Filtros / progresso / ajustes -->
+<section id="panel" class="panel glass" aria-hidden="true">
+  <header class="panel-head">
+    <div>
+      <h2>Leonida</h2>
+      <p id="totalProgress" class="muted"></p>
+    </div>
+    <button id="panelClose" class="round flat" type="button" aria-label="Fechar">×</button>
+  </header>
+  <div class="panel-tabs">
+    <button type="button" data-tab="cats" class="on">Categorias</button>
+    <button type="button" data-tab="more">Ajustes</button>
+  </div>
+  <div id="tabCats" class="panel-body"></div>
+  <div id="tabMore" class="panel-body" hidden></div>
+</section>
+
+<div id="viewer" class="viewer" hidden><img alt=""></div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
