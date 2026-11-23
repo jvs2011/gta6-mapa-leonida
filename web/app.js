@@ -501,7 +501,7 @@
       <div class="d-actions">${actions}</div>
       ${it.s ? `<div class="d-photos" data-act="zoom"><img src="screenshots/${esc(it.s)}" alt="" loading="lazy"></div>` : ""}
       <div class="d-rows">
-        ${it.d ? `<div class="d-row">${ICON_SVG.info}<span>${esc(it.d)}</span></div>` : ""}
+        ${it.d ? descRow(it.d) : ""}
         ${where ? `<div class="d-row">${ICON_SVG.place}<span>${esc(where)}${it.z && it.a && !it.a.includes(it.z) ? ", " + esc(it.z) : ""}</span></div>` : ""}
         ${it.r ? `<div class="d-row">${ICON_SVG.real}<span>Na vida real: ${esc(it.r)}</span></div>` : ""}
         ${k.trackable ? `<div class="d-row">${ICON_SVG.prog}<span>${total - left} de ${total} encontrados em ${esc(k.name)}</span></div>` : ""}
@@ -517,6 +517,23 @@
       map.flyTo(ll, Math.max(map.getZoom(), opts.zoom || 4.2), { duration: 0.8 });
       map.once("moveend", () => keepAboveSheet(ll));
     } else requestAnimationFrame(() => keepAboveSheet(ll));
+  }
+  // ---- spoilers: descrições que citam um capítulo ficam escondidas até você liberar
+  const FINAL = 100;
+  function spoilerChapter(d) {
+    let ch = 0;
+    if (/cap[ií]tulo final/i.test(d)) ch = FINAL;
+    for (const m of d.matchAll(/[Cc]ap[ií]tulo (\d+)/g)) ch = Math.max(ch, +m[1]);
+    return ch;
+  }
+  const chName = (ch) => (ch >= FINAL ? "capítulo final" : `Capítulo ${ch}`);
+  function descRow(d) {
+    const ch = spoilerChapter(d);
+    if (ch > (S.chapter || 0)) {
+      return `<div class="d-row spoiler">${ICON_SVG.info}<span><b>Pode ter spoiler do ${esc(chName(ch))}.</b>
+        <button class="pill" type="button" data-act="spoiler" data-ch="${ch}">${ch >= FINAL ? "Clique se você já chegou ao capítulo final" : `Clique se você já passou do Capítulo ${ch}`}</button></span></div>`;
+    }
+    return `<div class="d-row">${ICON_SVG.info}<span>${esc(d)}</span></div>`;
   }
   function keepAboveSheet(ll) {
     const pt = map.latLngToContainerPoint(ll);
@@ -540,6 +557,12 @@
     const it = selected, act = b.dataset.act;
     if (act === "close") closeSheet();
     else if (act === "zoom") openViewer(`screenshots/${it.s}`);
+    else if (act === "spoiler") {
+      S.chapter = Math.max(S.chapter || 0, +b.dataset.ch);
+      save();
+      toast(S.chapter >= FINAL ? "Tudo liberado" : `Descrições liberadas até o Capítulo ${S.chapter}`);
+      select(it);
+    }
     else if (act === "found") {
       if (S.found[it.i]) delete S.found[it.i]; else S.found[it.i] = Date.now();
       save();
@@ -819,6 +842,7 @@
     $("#tabMore").innerHTML = `
       <button class="row ${S.style === "escuro" ? "on" : ""}" type="button" data-m="style">${svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>')}<span class="tx">Modo escuro</span><span class="sw"></span></button>
       <button class="row ${S.hideFound ? "on" : ""}" type="button" data-m="hide">${svg('<path d="M20 6 9 17l-5-5"/>')}<span class="tx">Ocultar encontrados</span><span class="sw"></span></button>
+      ${S.chapter ? `<button class="row" type="button" data-m="spoilers">${svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>')}<span class="tx">Spoilers liberados até o ${S.chapter >= FINAL ? "capítulo final" : "Capítulo " + S.chapter}<small>Toque para esconder de novo</small></span></button>` : ""}
       <button class="row" type="button" data-m="defaults">${svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>')}<span class="tx">Mostrar todas as categorias</span></button>
       <div class="sep"></div>
       <button class="row" type="button" data-m="export">${svg('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>')}<span class="tx">Exportar progresso<small>Arquivo .json de backup</small></span></button>
@@ -847,6 +871,7 @@
     if (m === "style") { setStyle(S.style === "escuro" ? "padrao" : "escuro"); renderMore(); }
     else if (m === "hide") { S.hideFound = !S.hideFound; save(); refresh(); renderMore(); }
     else if (m === "defaults") { S.kinds = defaultKinds(); S.chip = null; save(); refresh(); renderCats(); toast("Todas as categorias visíveis"); }
+    else if (m === "spoilers") { S.chapter = 0; save(); renderMore(); toast("Descrições com spoiler escondidas de novo"); }
     else if (m === "export") exportProgress();
     else if (m === "import") $("#importFile").click();
     else if (m === "reset") {
