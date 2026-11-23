@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Gera web/tiles/<estilo>/{z}/{z},{y},{x}.webp com o render.html no Chromium (Playwright).
+/* Gera web/tiles/<estilo>/{z}/{y}/{x}.webp com o render.html no Chromium (Playwright).
  *
  *   node scripts/estilo/render.js <dados-fonte> <rasters> <web/> [estilos] [zooms] [tiles]
  *
@@ -60,10 +60,10 @@ const WORKERS = 3;
       const j = jobs.shift();
       const out = await page.evaluate(([st, z, bx, by, n, want]) => window.renderChunk(st, z, bx, by, n, want),
         [j.st, j.z, j.bx, j.by, N, j.want]);
-      const dir = path.join(web, "tiles", j.st, String(j.z));
-      fs.mkdirSync(dir, { recursive: true });
       for (const [tx, ty, url] of out) {
-        fs.writeFileSync(path.join(dir, `${j.z},${ty},${tx}.webp`), Buffer.from(url.split(",")[1], "base64"));
+        const dir = path.join(web, "tiles", j.st, String(j.z), String(ty));
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, `${tx}.webp`), Buffer.from(url.split(",")[1], "base64"));
         files++;
       }
       done++;
