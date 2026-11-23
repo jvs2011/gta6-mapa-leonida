@@ -78,7 +78,8 @@
       return L.TileLayer.prototype.createTile.call(this, coords, done);
     },
   });
-  const tileLayer = (style) => new Tiles(`tiles/${style}/{z}/{z},{y},{x}.webp`, {
+  // vírgula já codificada (%2C): a Cloudflare redireciona "," e isso dobraria o tempo de cada tile
+  const tileLayer = (style) => new Tiles(`tiles/${style}/{z}/{z}%2C{y}%2C{x}.webp`, {
     tileSize: 256, minZoom: -1, minNativeZoom: 0, maxNativeZoom: 5, noWrap: true, bounds: BOUNDS,
     keepBuffer: 4, updateWhenZooming: false, className: "base",
   });
@@ -714,7 +715,7 @@
   // ================================================================ camadas
   const layers = $("#layers");
   function renderLayers() {
-    const thumb = (st) => `tiles/${st}/2/2,7,7.webp`;
+    const thumb = (st) => `tiles/${st}/2/2%2C7%2C7.webp`;
     const det = (key, label, on, svg) => `<button class="l-det ${on ? "on" : ""}" type="button" data-l="${key}"><span>${svg}</span>${label}</button>`;
     $("#layersBody").innerHTML = `
       <div class="l-h"><h3>Tipo de mapa</h3><button class="icon-btn" type="button" data-l="close" aria-label="Fechar">${ICON_SVG.close}</button></div>
@@ -884,7 +885,7 @@
     downloadOffline.busy = true;
     const style = S.style;
     const urls = [];
-    for (const z in TILES) for (const k of TILES[z]) urls.push(`tiles/${style}/${z}/${z},${k}.webp`);
+    for (const z in TILES) for (const k of TILES[z]) urls.push(`tiles/${style}/${z}/${z}%2C${k.replace(",", "%2C")}.webp`);
     for (const it of ITEMS) if (it.s) urls.push(`screenshots/${it.s}`);
     const prog = $("#offProg");
     if (prog) prog.hidden = false;
