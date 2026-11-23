@@ -1,0 +1,13 @@
+# Cloudflare Pages: cache das partes que quase não mudam
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/tiles/*
+  Cache-Control: public, max-age=2592000
+/screenshots/*
+  Cache-Control: public, max-age=2592000
+/pins/*
+  Cache-Control: public, max-age=2592000
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

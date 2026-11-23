@@ -34,6 +34,8 @@ scripts/estilo/         gera o mapa base: rasters.py (relevo e mata) e render.js
 
 ### Opção A: app na Tela de Início (PWA). Não precisa de Mac.
 
+O app fica publicado na **Cloudflare Pages** (grátis, sem limite de tráfego), que atualiza sozinha a cada envio para o GitHub. A configuração na Cloudflare é: Workers & Pages → Create → Pages → Connect to Git → este repositório, build command vazio, output directory `web`. O arquivo `web/_headers` define o cache. A cópia no GitHub Pages também continua funcionando.
+
 1. Publique a pasta `web/` num endereço HTTPS. O repositório já vem com a automação `.github/workflows/pages.yml`: em *Settings → Pages → Source*, escolha **GitHub Actions** e o app sai em `https://jvs2011.github.io/gta6-mapa-leonida/`. Numa conta gratuita, o GitHub Pages só funciona com o repositório **público**. Os dados têm licença aberta, então não há problema em deixá-lo público.
 2. No iPhone, abra o endereço no **Safari**, toque em **Compartilhar → Adicionar à Tela de Início**.
 3. Abra pelo ícone **Leonida**. O app abre em tela cheia, direto no mapa.
