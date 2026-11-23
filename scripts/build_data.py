@@ -15,6 +15,9 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "traducao"))
+import traduzir as tr  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 
@@ -158,6 +161,7 @@ def main(src):
         return fb if fb in pin_names else None
 
     out_items = []
+    sem_traducao = set()
     shots = set()
     for it in items:
         shot = it.get("screenshot")
@@ -170,7 +174,27 @@ def main(src):
                "r": it.get("real_life"), "s": shot, "p": pin_for(it),
                "z": district_at(it["x"], it["y"], districts)}
         row.update({k: v for k, v in opt.items() if v})
+        # flamingos de cocaína vêm misturados em "Pacotes escondidos": vão para a categoria própria
+        if row["n"].startswith("Cocaine Flamingo") and "flamingo" in cat_by:
+            row["k"] = "flamingo"
+            row.pop("p", None)
+        # tradução para português (nomes próprios ficam como estão; o original vai em "o" para a busca)
+        n_pt = tr.nome(row["n"])
+        if n_pt != row["n"]:
+            row["o"] = row["n"]
+            row["n"] = n_pt
+        if row.get("t"):
+            row["t"] = tr.tipo(row["t"])
+        if row.get("a"):
+            row["a"] = tr.area(row["a"])
+        if row.get("d"):
+            d_pt, ok = tr.descricao(row["d"])
+            if not ok:
+                sem_traducao.add(row["d"])
+            row["d"] = d_pt
         out_items.append(row)
+    if sem_traducao:
+        print(f"AVISO: {len(sem_traducao)} descrições sem tradução (ficam em inglês). Exemplo: {next(iter(sem_traducao))[:90]}")
 
     counts = Counter(i["k"] for i in out_items)
     kinds = []

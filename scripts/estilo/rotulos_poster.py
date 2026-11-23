@@ -14,6 +14,10 @@ Uso: python3 rotulos_poster.py <web/data/rotulos.json>
 """
 import json
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "traducao"))
+import traduzir as tr  # noqa: E402
 
 FIT = {"sx": 3.046, "sy": 3.028, "ox": -485.8, "oy": -473.8}
 
@@ -106,7 +110,10 @@ def main(out):
         n = title(name)
         if c == "hood" and ("Park" in n or "Canyon" in n or "Swamp" in n):
             c = "park"
-        row = {"n": n, "c": c, "x": round(x, 1), "y": round(y, 1)}
+        pt = tr.lugar(n, c)
+        row = {"n": pt, "c": c, "x": round(x, 1), "y": round(y, 1)}
+        if pt != n:
+            row["o"] = n
         if c == "poi":
             row["i"] = "airport" if "Airport" in n else ("prison" if "Prison" in n or "Correctional" in n else "landmark")
         rows.append(row)

@@ -637,7 +637,7 @@
   function searchText(it) {
     if (!it._s) {
       const k = kindOf(it);
-      it._s = norm([it.n, it.t, k.name, k.en, it.a, it.z, it.r, it.i].join(" "));
+      it._s = norm([it.n, it.o, it.t, k.name, k.en, it.a, it.z, it.r, it.i].join(" "));
     }
     return it._s;
   }
@@ -652,7 +652,7 @@
     const nq = norm(raw);
     const startsWord = (txt, w) => norm(txt).split(/[^a-z0-9]+/).some((x) => x.startsWith(w));
     const cats = Object.values(KINDS).filter((k) => words.every((w) => startsWord(k.name + " " + k.en, w))).slice(0, 4);
-    const regs = ROT.filter((l) => l.c !== "poi" && words.every((w) => norm(l.n).includes(w))).slice(0, 5);
+    const regs = ROT.filter((l) => l.c !== "poi" && words.every((w) => norm(l.n + " " + (l.o || "")).includes(w))).slice(0, 5);
     const hits = [];
     const pois = FEATURES.filter((f) => f.t === "item" && f.it.k === "poi").map((f) => f.it);
     for (const it of allItems().concat(pois)) if (words.every((w) => searchText(it).includes(w))) hits.push(it);
