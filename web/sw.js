@@ -3,7 +3,7 @@
  * - Tiles, pins e fotos: cache primeiro (guardados quando vistos ou pelo botão "Baixar mapa").
  * Mude VERSION quando trocar app.js/style.css para forçar atualização.
  */
-const VERSION = "7";
+const VERSION = "8";
 const CORE = "leonida-core-v" + VERSION;
 const MEDIA = "leonida-media-v3";
 const SHELL = [

@@ -314,6 +314,17 @@
   }
 
   let placedHits = [];
+  // animações do mapa: pontos novos entram com fade; o pino selecionado cai com quique
+  const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const FADE_MS = 220, DROP_MS = 520;
+  let seen = new Map(), selectedAt = 0, animFrame = 0;
+  const easeOutBounce = (t) => {
+    const n = 7.5625, d = 2.75;
+    if (t < 1 / d) return n * t * t;
+    if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+    if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+    return n * (t -= 2.625 / d) * t + 0.984375;
+  };
   function drawOverlay(layer) {
     const r = layer._renderer;
     if (!r._drawing || !FEATURES.length) return;
@@ -326,6 +337,16 @@
     const selP = selected ? map.latLngToLayerPoint([-selected.y, selected.x]) : null;
     if (selP) grid.add([selP.x - 14, selP.y - 36, selP.x + 14, selP.y + 2]);
     ctx.save();
+    const now = performance.now(), nextSeen = new Map();
+    let animating = false;
+    const fade = (key) => {
+      let t0 = seen.get(key);
+      if (t0 == null) t0 = now;
+      nextSeen.set(key, t0);
+      const a = REDUCED ? 1 : Math.min(1, (now - t0) / FADE_MS);
+      if (a < 1) animating = true;
+      ctx.globalAlpha = a * a * (3 - 2 * a);
+    };
     for (const f of FEATURES) {
       let minZ = f.minZ;
       if (f.t === "item") {
@@ -353,12 +374,14 @@
         const rect = [p.x - w / 2 - 3, p.y - h / 2 - 2, p.x + w / 2 + 3, p.y + h / 2 + 2];
         if (grid.hits(rect)) { ctx.letterSpacing = "0px"; continue; }
         grid.add(rect);
+        fade("L" + f.n);
         drawText(ctx, ls, p.x, p.y, font, dark ? c.corE : c.cor, "center", lh);
         ctx.letterSpacing = "0px";
       } else if (f.t === "shield") {
         const rect = [p.x - 14, p.y - 11, p.x + 14, p.y + 11];
         if (grid.hits(rect)) continue;
         grid.add(rect);
+        fade("S" + f.ref + f.x);
         drawShield(ctx, p.x, p.y, f.ref, f.kind);
       } else {
         const it = f.it, k = kindOf(it), found = !!S.found[it.i];
@@ -368,6 +391,7 @@
           const rect = [p.x - 6, p.y - 6, p.x + 6, p.y + 6];
           if (grid.hits(rect)) continue;
           grid.add(rect);
+          fade("D" + it.i);
           drawDot(ctx, p.x, p.y, colour, found);
           hits.push([p.x - 9, p.y - 9, p.x + 9, p.y + 9, it]);
           continue;
@@ -392,6 +416,7 @@
         // lugares comuns sem espaço para o nome somem (discreto como o Google); jogo e pontos seus ficam só com o ícone
         if (!lab && k.group === "Places" && !resultMode) continue;
         grid.add(iconPad);
+        fade("P" + it.i);
         drawPoiPin(ctx, p.x, p.y, colour, glyphKey(it), found);
         hits.push([icon[0] - 4, icon[1] - 4, icon[2] + 4, icon[3] + 4, it]);
         if (lab) {
@@ -401,15 +426,27 @@
         }
       }
     }
-    // selecionado por cima de tudo
+    ctx.globalAlpha = 1;
+    // selecionado por cima de tudo, caindo com um quique
     if (selP) {
-      drawRedPin(ctx, selP.x, selP.y);
+      const tp = REDUCED ? 1 : Math.min(1, (now - selectedAt) / DROP_MS);
+      if (tp < 1) animating = true;
+      const dy = -(1 - easeOutBounce(tp)) * 38;
+      // sombra no chão, que cresce enquanto o pino desce
+      ctx.beginPath(); ctx.ellipse(selP.x, selP.y, 3 + 4 * tp, 1.5 + 1.5 * tp, 0, 0, 6.2832);
+      ctx.fillStyle = "rgba(0,0,0," + (0.12 + 0.13 * tp) + ")"; ctx.fill();
+      ctx.globalAlpha = Math.min(1, tp * 2.5);
+      drawRedPin(ctx, selP.x, selP.y + dy);
+      ctx.globalAlpha = Math.min(1, Math.max(0, (tp - 0.35) / 0.4));
       const ls = lines(selected.k === "tmp" ? "Pino marcado" : shortName(selected), 18);
       drawText(ctx, ls, selP.x + 16, selP.y - 20, `700 13px ${FONT}`, dark ? "#f28b82" : "#c5221f", "left", 15);
+      ctx.globalAlpha = 1;
       hits.push([selP.x - 14, selP.y - 36, selP.x + 14, selP.y + 2, selected]);
     }
     ctx.restore();
     placedHits = hits;
+    seen = nextSeen;
+    if (animating && !animFrame) animFrame = requestAnimationFrame(() => { animFrame = 0; repaint(); });
   }
 
   const renderer = L.canvas({ padding: 0.5, tolerance: 0 });
@@ -475,6 +512,7 @@
 
   function select(it, opts = {}) {
     hideLayers();
+    if (selected !== it) selectedAt = performance.now();
     selected = it;
     const k = kindOf(it);
     const found = !!S.found[it.i];
@@ -507,6 +545,7 @@
         ${k.trackable ? `<div class="d-row">${ICON_SVG.prog}<span>${total - left} de ${total} encontrados em ${esc(k.name)}</span></div>` : ""}
         ${it.k === "tmp" ? `<div class="d-row">${ICON_SVG.place}<span>${it.x.toFixed(1)}, ${it.y.toFixed(1)}</span></div>` : ""}
       </div>`;
+    sheetBody.classList.remove("in"); void sheetBody.offsetWidth; sheetBody.classList.add("in");
     sheet.classList.add("open");
     sheet.setAttribute("aria-hidden", "false");
     sheet.scrollTop = 0;
@@ -1030,6 +1069,10 @@
   // ================================================================ inicialização
   setStyle(S.style);
   overlay.addTo(map);
+  renderer._container.classList.add("ov");
+  let zoomT = 0;
+  map.on("zoomstart", () => { clearTimeout(zoomT); map.getContainer().classList.add("zooming"); });
+  map.on("zoomend", () => { clearTimeout(zoomT); zoomT = setTimeout(() => map.getContainer().classList.remove("zooming"), 70); });
 
   const getJSON = (u) => fetch(u).then((r) => r.json());
   Promise.all([
