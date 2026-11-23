@@ -37,6 +37,16 @@ PT = {
     "civic": "Polícia, hospitais e governo", "leisure": "Lazer e esporte", "nature": "Natureza",
     "building": "Prédios e pontos turísticos",
 }
+# Cores no padrão Google Maps (por grupo; lugares têm cor por tipo)
+GROUP_COLOR = {"Collectibles": "#9334e6", "Activities": "#c5221f", "Crime": "#3c4043", "Other": "#70757a"}
+PLACE_COLOR = {"food": "#f29900", "shop": "#1a73e8", "hotel": "#d81b60", "transport": "#1a73e8",
+               "civic": "#70757a", "leisure": "#12a4af", "nature": "#34a853", "building": "#12a4af",
+               "safehouse": "#5f6368"}
+# zoom do app a partir do qual o ponto aparece (como o Google: o mais importante primeiro)
+GROUP_MINZ = {"Collectibles": 3.0, "Activities": 3.25, "Crime": 3.5, "Other": 4.0}
+PLACE_MINZ = {"building": 3.5, "nature": 3.0, "hotel": 3.25, "leisure": 3.25, "civic": 3.5, "food": 4.0,
+              "shop": 4.0, "transport": 4.5, "safehouse": 3.25}
+
 GROUP_PT = {"Collectibles": "Colecionáveis", "Activities": "Atividades", "Crime": "Crime",
             "Places": "Lugares", "Other": "Outros"}
 
@@ -168,9 +178,12 @@ def main(src):
         if not counts[k["key"]]:
             continue
         pins = Counter(i.get("p") for i in out_items if i["k"] == k["key"] and i.get("p"))
+        g = k["group"]
         kinds.append({"key": k["key"], "name": PT.get(k["key"], k["name"]), "en": k["name"],
-                      "colour": k["colour"], "icon": k["icon"], "group": k["group"],
-                      "trackable": k["group"] != "Places", "count": counts[k["key"]],
+                      "colour": PLACE_COLOR.get(k["key"]) if g == "Places" else GROUP_COLOR.get(g, "#70757a"),
+                      "minz": PLACE_MINZ.get(k["key"], 4.0) if g == "Places" else GROUP_MINZ.get(g, 4.0),
+                      "icon": k["icon"], "group": g,
+                      "trackable": g != "Places", "count": counts[k["key"]],
                       "pin": pins.most_common(1)[0][0] if pins else None})
 
     commit = ""
@@ -190,12 +203,20 @@ def main(src):
     (WEB / "data").mkdir(parents=True, exist_ok=True)
     (WEB / "data/mapa.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
 
-    # Arquivos de mídia
-    for sub in ("tiles/night", "tiles/day"):
-        dst = WEB / sub
-        if dst.exists():
-            shutil.rmtree(dst)
-        shutil.copytree(pub / sub, dst)
+    # Ícones das categorias (Lucide, ISC) como traçado SVG, para desenhar em branco no app
+    icons = {}
+    for k in kinds:
+        f = pub / "icons" / f"{k['key']}.svg"
+        if f.exists():
+            body = f.read_text()
+            inner = body[body.index(">", body.index("<svg")) + 1:body.rindex("</svg>")]
+            icons[k["key"]] = re.sub(r"\s+", " ", inner).strip()
+    (WEB / "data/icones.json").write_text(json.dumps(icons, separators=(",", ":")))
+    shutil.copy2(pub / "icons/LICENSE", WEB / "data/icones-LICENSE.txt")
+    # Placas de rodovia lidas do mapa impresso
+    shutil.copy2(data / "routes.json", WEB / "data/rotas.json")
+
+    # Arquivos de mídia (os tiles do mapa base são gerados por scripts/estilo/render.js)
     dst = WEB / "pins"
     dst.mkdir(exist_ok=True)
     for n in pin_names:
@@ -209,7 +230,7 @@ def main(src):
 
     # Lista de tiles existentes (o mar vazio não tem arquivo): o app só pede o que existe.
     tiles = defaultdict(list)
-    for f in sorted((WEB / "tiles/night").glob("*/*.webp")):
+    for f in sorted((pub / "tiles/night").glob("*/*.webp")):
         z, y, x = f.stem.split(",")
         tiles[z].append(f"{y},{x}")
     (WEB / "data/tiles.json").write_text(json.dumps(tiles, separators=(",", ":")))

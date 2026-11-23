@@ -1,26 +1,33 @@
-# Mapa Leonida — app pessoal de mapa do GTA VI para iPhone
+# Mapa Leonida: o mapa do GTA VI com cara de Google Maps, para iPhone
 
-Abriu, já está no mapa: sem tela de boas-vindas nem menu inicial. O app volta exatamente onde você parou, com o mesmo zoom, os mesmos filtros e o mesmo modo dia ou noite.
+Abriu, já está no mapa. Leonida aparece como se estivesse no Google Maps: água turquesa clara, mata em verde-menta, relevo discreto no norte, ruas cinza e rodovias cinza-azuladas. A geografia e os nomes dos lugares vêm do mapa oficial da Rockstar. O app volta exatamente onde você parou.
 
-- **4.680 pontos** em 44 categorias, entre colecionáveis, atividades, crimes e lugares, com o nome de cada categoria em português.
-- **610 fotos** de onde fica cada item, além de descrições e do lugar real em Miami/Flórida em que cada ponto se inspira.
-- **Mapa base de dia e de noite**, traçado a partir do mapa oficial impresso de Leonida que a Rockstar lançou em 19/11/2026.
-- **Progresso:** você marca o que já encontrou, vê a barra por categoria, pode ocultar o que já achou e tem o botão "Próximo perto".
-- **Busca** por nome, tipo, região ou lugar real. Por exemplo, "ritz" acha os hotéis inspirados no Ritz-Carlton.
-- **Pontos pessoais:** toque e segure no mapa para criar o seu.
-- **Funciona sem internet.**
-- **Backup:** exporte e importe o progresso em `.json`.
+- **Zoom progressivo como no Google:** de longe aparecem só as cidades e os oceanos. Ao aproximar, entram as cidades menores, os condados, os bairros, os parques e as placas das rodovias. Por último aparecem os pontos de interesse: pequenas gotas coloridas com ícone branco e o nome ao lado. O que é mais importante aparece primeiro, e o que se sobrepõe some.
+- **4.680 pontos** em 44 categorias, entre colecionáveis, atividades, crimes, restaurantes, lojas, hotéis, transporte e pontos turísticos, além de 119 nomes de lugares transcritos do mapa oficial.
+- **Chips de categoria** abaixo da busca, como no Google ("Colecionáveis", "Restaurantes"…). Com um chip ativo, os resultados aparecem como bolinhas desde o zoom de longe.
+- **Ficha do lugar** igual à do Google: foto, descrição, bairro, lugar real que inspirou o ponto e os botões "Marcar como encontrado", "Próximo perto" e "Compartilhar".
+- **Camadas:** mapa Padrão ou Escuro, mostrar ou esconder lugares e pontos do jogo, ocultar o que já foi encontrado.
+- **Gestos do Google Maps:**
+  - toque duplo aproxima;
+  - toque duplo e arrastar dá zoom com um dedo;
+  - tocar com dois dedos afasta;
+  - toque longo marca um pino, que pode ser salvo como ponto seu.
+- **Barra de escala** durante o zoom e **progresso** no círculo do canto da busca.
+- **Funciona sem internet**, com backup do progresso em `.json`.
 
 ## Estrutura
 
 ```
-web/                  o app (HTML/CSS/JS + dados + tiles). É o mesmo código no PWA e no app nativo.
-  data/mapa.json      todos os pontos, já mesclados e traduzidos
-  data/tiles.json     lista dos tiles que existem
-  tiles/{night,day}/  mapa base (zoom 0–5, webp)
-  pins/ screenshots/  ícones e fotos
-ios/                  projeto Xcode (SwiftUI + WKWebView) que embute a pasta web/
-scripts/build_data.py gera web/data a partir da fonte de dados
+web/                    o app (HTML/CSS/JS + dados + tiles). É o mesmo código no PWA e no app nativo.
+  data/mapa.json        todos os pontos, já mesclados e com cores/zoom mínimo por categoria
+  data/rotulos.json     nomes dos lugares do mapa oficial, em unidades do mapa
+  data/rotas.json       placas das rodovias · data/icones.json ícones (Lucide)
+  tiles/{padrao,escuro} mapa base estilo Google (zoom 0–5, webp), gerado pelos scripts abaixo
+  fonts/                Roboto (Apache 2.0)
+ios/                    projeto Xcode (SwiftUI + WKWebView) que embute a pasta web/
+scripts/build_data.py   gera web/data a partir da fonte de dados
+scripts/estilo/         gera o mapa base: rasters.py (relevo e mata) e render.js (tiles no Chromium);
+                        rotulos_poster.py tem os nomes do mapa oficial
 ```
 
 ## Como instalar no iPhone (sem App Store)
@@ -30,7 +37,7 @@ scripts/build_data.py gera web/data a partir da fonte de dados
 1. Publique a pasta `web/` num endereço HTTPS. O repositório já vem com a automação `.github/workflows/pages.yml`: em *Settings → Pages → Source*, escolha **GitHub Actions** e o app sai em `https://jvs2011.github.io/gta6-mapa-leonida/`. Numa conta gratuita, o GitHub Pages só funciona com o repositório **público**. Os dados têm licença aberta, então não há problema em deixá-lo público.
 2. No iPhone, abra o endereço no **Safari**, toque em **Compartilhar → Adicionar à Tela de Início**.
 3. Abra pelo ícone **Leonida**. O app abre em tela cheia, direto no mapa.
-4. Opcional: em *Filtros → Ajustes → Baixar mapa para usar sem internet* (cerca de 130 MB) o mapa inteiro fica no aparelho. Mesmo sem esse passo, tudo o que você já viu fica guardado no cache.
+4. Opcional: em *Filtros → Ajustes → Baixar mapa para usar sem internet* (cerca de 110 MB) o mapa inteiro fica no aparelho. Mesmo sem esse passo, tudo o que você já viu fica guardado no cache.
 
 ### Opção B: app nativo instalado pelo Xcode. Precisa de um Mac.
 
@@ -41,7 +48,7 @@ scripts/build_data.py gera web/data a partir da fonte de dados
 
 Com o Apple ID **gratuito**, a instalação vale por **7 dias**. Depois disso, basta ligar o iPhone no Mac e dar Run de novo. O progresso não se perde, porque fica salvo no aparelho (UserDefaults). Com a conta paga de desenvolvedor (US$ 99/ano), a instalação vale por 1 ano.
 
-O app nativo leva o mapa inteiro dentro dele (cerca de 265 MB) e funciona offline desde a primeira abertura.
+O app nativo leva o mapa inteiro dentro dele (cerca de 140 MB) e funciona offline desde a primeira abertura.
 
 ### Testar no computador
 
@@ -56,13 +63,21 @@ Abra http://localhost:8000.
 git clone https://github.com/fbritoferreira/gta6.git ../fonte-gta6   # ou: cd ../fonte-gta6 && git pull
 python3 scripts/build_data.py ../fonte-gta6
 ```
-Depois, republique a pasta `web/` (PWA) ou dê Run de novo no Xcode (app nativo). No PWA, aumente o `VERSION` em `web/sw.js` quando mudar `app.js` ou `style.css`.
+
+Para regerar o mapa base (só é preciso quando a fonte mudar o litoral, as ruas ou os prédios), use Node e Playwright:
+
+```bash
+python3 scripts/estilo/rasters.py ../fonte-gta6/public/data/land.json /tmp/rasters
+node scripts/estilo/render.js ../fonte-gta6/public/data /tmp/rasters web padrao,escuro
+```
+
+Depois de qualquer atualização, envie para o GitHub (o Pages publica sozinho) ou dê Run de novo no Xcode. No PWA, aumente o `VERSION` em `web/sw.js` quando mudar `app.js` ou `style.css`.
 
 ## Fontes pesquisadas
 
 | Fonte | Usada? | Observação |
 |---|---|---|
-| Mapa oficial da Rockstar (download de 19/11/2026, página do GTA VI) | Indiretamente | O contorno da terra, as estradas e as rodovias do mapa base foram traçados a partir dele pelo projeto abaixo. O arquivo oficial em si é só uma imagem para imprimir, sem pontos marcados. |
+| Mapa oficial da Rockstar (download de 19/11/2026, página do GTA VI) | ✅ Nomes e referência | Os 119 nomes de lugares (condados, cidades, bairros, ilhas, águas, pontos de referência) foram transcritos dele, nas mesmas posições. O contorno e as ruas da fonte principal também foram traçados a partir dele. A imagem em si não faz parte do app. |
 | [Open GTA 6 Map](https://github.com/fbritoferreira/gta6) (fbritoferreira) | ✅ **Fonte principal** | CC BY 4.0. Traz pontos, lugares, fotos, tiles dia/noite e pins, com atualização frequente. |
 | [gta6-leonida-map-data](https://github.com/duanhesen/gta6-leonida-map-data) (GTA6Maps) | Conferida | CC BY 4.0, 798 marcadores (marcos e negócios). Já estão cobertos pela fonte principal. |
 | [gta6map.github.io](https://github.com/gta6map/gta6map.github.io) | Conferida | Domínio público, 731 marcos de antes do lançamento. Já estão cobertos. |
@@ -75,4 +90,6 @@ Depois, republique a pasta `web/` (PWA) ou dê Run de novo no Xcode (app nativo)
 
 - Dados, mapa base, pins e fotos: **Open GTA 6 Map**, de fbritoferreira e colaboradores, sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). O crédito aparece no canto do mapa e na aba Ajustes.
 - [Leaflet](https://leafletjs.com) 1.9.4: licença BSD-2 (`web/vendor/leaflet/LICENSE`).
+- Ícones [Lucide](https://lucide.dev): licença ISC (`web/data/icones-LICENSE.txt`). Fonte Roboto: licença Apache 2.0 (`web/fonts/LICENSE-Roboto.txt`).
+- O visual imita a linguagem do Google Maps só para uso pessoal. Não há nenhum vínculo com o Google, e nenhuma marca ou logo do Google é usada.
 - Este é um app de fã, para uso pessoal, sem vínculo com a Rockstar Games ou a Take-Two. GTA, Grand Theft Auto e Leonida são marcas dos seus donos.

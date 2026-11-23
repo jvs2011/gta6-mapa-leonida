@@ -3,13 +3,15 @@
  * - Tiles, pins e fotos: cache primeiro (guardados quando vistos ou pelo botão "Baixar mapa").
  * Mude VERSION quando trocar app.js/style.css para forçar atualização.
  */
-const VERSION = "1";
+const VERSION = "3";
 const CORE = "leonida-core-v" + VERSION;
-const MEDIA = "leonida-media-v1";
+const MEDIA = "leonida-media-v2";
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "manifest.webmanifest",
   "vendor/leaflet/leaflet.js", "vendor/leaflet/leaflet.css",
-  "data/mapa.json", "data/tiles.json", "img/icon-180.png",
+  "data/mapa.json", "data/tiles.json", "data/rotulos.json", "data/rotas.json", "data/icones.json",
+  "fonts/roboto-latin-400-normal.woff2", "fonts/roboto-latin-500-normal.woff2", "fonts/roboto-latin-700-normal.woff2",
+  "img/icon-180.png",
 ];
 
 self.addEventListener("install", (e) => {

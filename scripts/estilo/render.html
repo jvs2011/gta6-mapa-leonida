@@ -1,0 +1,193 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>render</title>
+<body>
+<script>
+/* Desenha os tiles do mapa base no estilo Google Maps a partir dos dados vetoriais do Open GTA 6 Map.
+ * Coordenadas em unidades do mapa (CRS.Simple; zoom 0 = 1024 unidades). Cada tile tem 1024 px.
+ * Nada de rótulos aqui: nomes e pontos de interesse são desenhados pelo app, nítidos e com colisão. */
+const X0 = 160, Y0 = 160, RW = 672, RH = 640; // área de relevo.png / vegetacao.png
+
+const STYLES = {
+  // Google Maps claro (paleta pós-2023: água turquesa clara, vias cinza, rodovias cinza-azuladas, mata menta)
+  padrao: {
+    water: "#94d3eb", land: "#eef1ea", veg: "#d1eadb", park: "#bfe5cc", sand: "#f4eac8",
+    urban: "#eceef1", building: "#e1e4e9", buildingLine: "#d2d6dd", paved: "#dce1e7",
+    relief: [0.5, 0.45, 0.36, 0.28, 0.2, 0.15], reliefMode: "overlay",
+    rail: "#bcc2ca",
+    highway: { fill: "#b8c7dc", casing: "#a0b2ca" },
+    main: { fill: "#ffffff", casing: "#cdd3db" },
+    lowRoad: "#d7dce3",                      // vias secundárias de longe: cinza, sem contorno
+    road: { fill: "#ffffff", casing: "#dde1e6" },
+  },
+  // Google Maps modo escuro
+  escuro: {
+    water: "#0f2a3e", land: "#1d2330", veg: "#1d2d2c", park: "#1b3832", sand: "#35332c",
+    urban: "#232a37", building: "#2b3343", buildingLine: "#353e50", paved: "#323a4a",
+    relief: [0.3, 0.27, 0.22, 0.17, 0.12, 0.08], reliefMode: "overlay",
+    rail: "#3d4656",
+    highway: { fill: "#56657e", casing: "#3e4a5f" },
+    main: { fill: "#3d4759", casing: "#2a313d" },
+    lowRoad: "#2f3746",
+    road: { fill: "#364051", casing: "#272e39" },
+  },
+};
+// largura em px de tela (CSS) no zoom nativo de cada nível de tile 0..5 (0 = não desenha)
+const WIDTH = {
+  highway: [0.8, 1.1, 1.6, 2.4, 3.6, 5.4],
+  main:    [0.45, 0.75, 1.25, 2.2, 3.4, 5.0],
+  street:  [0, 0.3, 0.55, 1.1, 1.8, 2.8],
+  minor:   [0, 0, 0.45, 0.9, 1.5, 2.3],
+  rail:    [0, 0.35, 0.5, 0.8, 1.1, 1.5],
+};
+
+let D = null, relevo = null, vegMask = null, vegTint = {};
+
+const bboxOf = (rings) => {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const r of rings) for (const [x, y] of r) { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; }
+  return [a, b, c, d];
+};
+const loadImg = (src) => new Promise((ok, err) => { const i = new Image(); i.onload = () => ok(i); i.onerror = err; i.src = src; });
+
+window.setup = async (data) => {
+  relevo = await loadImg(data.relevo);
+  vegMask = await loadImg(data.veg);
+  const land = data.land.map((rings) => ({ rings, bb: bboxOf(rings) }));
+  const surf = {};
+  for (const f of data.surface.features) {
+    const g = f.geometry, layer = f.properties.layer;
+    const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+    for (const rings of polys) (surf[layer] ??= []).push({ rings, bb: bboxOf(rings) });
+  }
+  const lines = (fc, key) => {
+    const out = {};
+    for (const f of fc.features) {
+      const g = f.geometry;
+      const parts = g.type === "LineString" ? [g.coordinates] : g.coordinates;
+      for (const p of parts) (out[key(f)] ??= []).push({ p, bb: bboxOf([p]) });
+    }
+    return out;
+  };
+  D = { land, surf, roads: lines(data.roads, (f) => f.properties.kind), rails: lines(data.rails, () => "rail").rail || [] };
+  return true;
+};
+
+// máscara de vegetação pintada com a cor do estilo (luminância vira alfa)
+function tint(styleName) {
+  if (vegTint[styleName]) return vegTint[styleName];
+  const c = document.createElement("canvas");
+  c.width = vegMask.width; c.height = vegMask.height;
+  const x = c.getContext("2d");
+  x.drawImage(vegMask, 0, 0);
+  const im = x.getImageData(0, 0, c.width, c.height), d = im.data;
+  const hex = STYLES[styleName].veg, r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  for (let i = 0; i < d.length; i += 4) { const a = d[i]; d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = a; }
+  x.putImageData(im, 0, 0);
+  return (vegTint[styleName] = c);
+}
+
+const hits = (bb, v) => bb[2] >= v[0] && bb[0] <= v[2] && bb[3] >= v[1] && bb[1] <= v[3];
+function polyPath(ctx, items, v) {
+  ctx.beginPath();
+  for (const it of items) {
+    if (!hits(it.bb, v)) continue;
+    for (const r of it.rings) {
+      ctx.moveTo(r[0][0], r[0][1]);
+      for (let i = 1; i < r.length; i++) ctx.lineTo(r[i][0], r[i][1]);
+      ctx.closePath();
+    }
+  }
+}
+function linePath(ctx, items, v) {
+  ctx.beginPath();
+  for (const it of items) {
+    if (!hits(it.bb, v)) continue;
+    const p = it.p;
+    ctx.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+  }
+}
+
+window.renderChunk = (styleName, z, tx0, ty0, n, want) => {
+  const S = STYLES[styleName];
+  const k = 4 * 2 ** z;               // px por unidade
+  const tu = 256 / 2 ** z;            // unidades por tile
+  const size = n * 1024;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size;
+  const ctx = cv.getContext("2d");
+  const x0 = tx0 * tu, y0 = ty0 * tu;
+  const m = 12 / k + 2;
+  const v = [x0 - m, y0 - m, x0 + n * tu + m, y0 + n * tu + m];
+  ctx.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  const css = (w) => (w * 4) / k;
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+  // água (chapada, como no Google)
+  ctx.fillStyle = S.water;
+  ctx.fillRect(x0 - 1, y0 - 1, n * tu + 2, n * tu + 2);
+
+  // terra + mata + relevo discreto
+  ctx.fillStyle = S.land; polyPath(ctx, D.land, v); ctx.fill("evenodd");
+  ctx.save();
+  polyPath(ctx, D.land, v); ctx.clip("evenodd");
+  ctx.drawImage(tint(styleName), X0, Y0, RW, RH);
+  ctx.globalCompositeOperation = S.reliefMode;
+  ctx.globalAlpha = S.relief[z];
+  ctx.drawImage(relevo, X0, Y0, RW, RH);
+  ctx.restore();
+
+  // superfícies
+  ctx.fillStyle = S.sand; polyPath(ctx, D.surf.sand || [], v); ctx.fill("evenodd");
+  ctx.fillStyle = S.park; polyPath(ctx, D.surf.park || [], v); ctx.fill("evenodd");
+  ctx.fillStyle = S.urban; polyPath(ctx, D.surf.urban || [], v); ctx.fill("evenodd");
+  if (z >= 1) { ctx.fillStyle = S.paved; polyPath(ctx, D.surf.paved || [], v); ctx.fill("evenodd"); }
+  if (z >= 2) {
+    ctx.fillStyle = S.building; polyPath(ctx, D.surf.building || [], v); ctx.fill("evenodd");
+    if (z >= 4) { ctx.strokeStyle = S.buildingLine; ctx.lineWidth = css(0.5); ctx.stroke(); }
+  }
+
+  // ferrovias
+  if (WIDTH.rail[z]) { ctx.strokeStyle = S.rail; ctx.lineWidth = css(WIDTH.rail[z]); linePath(ctx, D.rails, v); ctx.stroke(); }
+
+  // vias: de longe só as importantes; de perto, ruas brancas com contorno
+  const casing = z >= 3;
+  const order = ["minor", "street"];
+  for (const kind of order) {
+    const w = WIDTH[kind][z];
+    if (!w) continue;
+    linePath(ctx, D.roads[kind] || [], v);
+    if (casing) {
+      ctx.strokeStyle = S.road.casing; ctx.lineWidth = css(w + 1.0); ctx.stroke();
+      ctx.strokeStyle = S.road.fill; ctx.lineWidth = css(w); ctx.stroke();
+    } else {
+      ctx.strokeStyle = S.lowRoad; ctx.lineWidth = css(w); ctx.stroke();
+    }
+  }
+  const mw = WIDTH.main[z];
+  linePath(ctx, D.roads.main || [], v);
+  if (z >= 2) { ctx.strokeStyle = S.main.casing; ctx.lineWidth = css(mw + (z >= 3 ? 1.2 : 0.8)); ctx.stroke(); }
+  ctx.strokeStyle = z >= 2 ? S.main.fill : S.lowRoad; ctx.lineWidth = css(mw); ctx.stroke();
+  const hw = WIDTH.highway[z];
+  linePath(ctx, D.roads.highway || [], v);
+  if (z >= 2) { ctx.strokeStyle = S.highway.casing; ctx.lineWidth = css(hw + (z >= 3 ? 1.0 : 0.7)); ctx.stroke(); }
+  ctx.strokeStyle = S.highway.fill; ctx.lineWidth = css(hw); ctx.stroke();
+
+  // corta em tiles
+  const out = [];
+  const t = document.createElement("canvas"); t.width = t.height = 1024;
+  const tc = t.getContext("2d");
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const tx = tx0 + i, ty = ty0 + j;
+    if (want && !want.includes(ty + "," + tx)) continue;
+    tc.clearRect(0, 0, 1024, 1024);
+    tc.drawImage(cv, i * 1024, j * 1024, 1024, 1024, 0, 0, 1024, 1024);
+    out.push([tx, ty, t.toDataURL("image/webp", 0.82)]);
+  }
+  return out;
+};
+</script>
+</body>
