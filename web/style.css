@@ -134,7 +134,7 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 body.sheet-open #btnHome { transform: translateY(-200px); opacity: 0; pointer-events: none; }
 
 .scale {
-  position: fixed; z-index: 600; left: calc(14px + var(--safe-l)); bottom: calc(22px + var(--safe-b));
+  position: fixed; z-index: 600; left: calc(14px + var(--safe-l)); bottom: calc(80px + var(--safe-b));
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; opacity: 0; transition: opacity .4s; pointer-events: none;
   font: 500 11px Roboto, sans-serif; color: var(--text); text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg);
 }
@@ -288,3 +288,24 @@ body.sheet-open #btnHome:active { transform: translateY(-200px); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* barra de progresso do rodapé */
+.progbar {
+  position: fixed; z-index: 700; left: calc(16px + var(--safe-l)); right: calc(84px + var(--safe-r));
+  bottom: calc(36px + var(--safe-b)); height: 36px; border-radius: 18px; overflow: hidden;
+  background: var(--bg); box-shadow: var(--shadow2); padding: 0; text-align: left;
+  transition: transform .25s ease, opacity .2s, box-shadow .2s;
+}
+.progbar .pb-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0; overflow: hidden; border-radius: 18px 0 0 18px;
+  transition: width .6s cubic-bezier(.2, .8, .2, 1), background-color .35s;
+}
+.progbar .pb-txt {
+  position: absolute; left: 0; top: 0; bottom: 0; width: calc(100vw - 100px - var(--safe-l) - var(--safe-r));
+  display: flex; align-items: center; padding: 0 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font: 500 13px Roboto, sans-serif; color: var(--text);
+}
+.progbar .pb-txt-on { color: #fff; }
+.progbar:active { transform: scale(.97); }
+body.sheet-open .progbar { transform: translateY(120px); opacity: 0; pointer-events: none; }
+.leaflet-control-attribution { margin-bottom: calc(var(--safe-b) + 2px) !important; }

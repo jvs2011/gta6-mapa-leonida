@@ -830,7 +830,28 @@
     const f = tr.filter((o) => S.found[o.i]).length;
     return { f, t: tr.length, pct: tr.length ? (100 * f) / tr.length : 0 };
   }
+  // barra de progresso no rodapé: geral, ou da categoria do chip ativo (se ela tiver itens rastreáveis)
+  const fmt = (n) => n.toLocaleString("pt-BR");
+  function updateProgBar() {
+    const chip = CHIPS.find((c) => c.key === S.chip);
+    let label = "Progresso geral", colour = "#34a853", list = ITEMS.filter((o) => KINDS[o.k] && KINDS[o.k].trackable);
+    if (chip) {
+      const ks = chipKinds(chip).filter((k) => KINDS[k].trackable);
+      if (ks.length) { label = chip.name; colour = chip.colour; list = ITEMS.filter((o) => ks.includes(o.k)); }
+    }
+    const f = list.filter((o) => S.found[o.i]).length, t = list.length;
+    const pct = t ? (100 * f) / t : 0;
+    const txt = `${label} · ${fmt(f)} de ${fmt(t)} · ${pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+    $("#pbTxt").textContent = txt;
+    $("#pbTxtOn").textContent = txt;
+    const fill = $("#pbFill");
+    fill.style.width = Math.max(pct, 0).toFixed(2) + "%";
+    fill.style.background = colour;
+    $("#progBar").style.setProperty("--pb", colour);
+  }
+  $("#progBar").addEventListener("click", openPanel);
   function updateRing() {
+    updateProgBar();
     const p = progress();
     $("#meTxt").textContent = p.pct >= 10 ? Math.round(p.pct) + "%" : p.pct.toFixed(p.pct ? 1 : 0) + "%";
     $("#ringFg").style.strokeDashoffset = (100.5 * (1 - p.pct / 100)).toFixed(1);
