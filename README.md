@@ -27,7 +27,7 @@ scripts/build_data.py gera web/data a partir da fonte de dados
 
 ### Opção A: app na Tela de Início (PWA). Não precisa de Mac.
 
-1. Publique a pasta `web/` em algum endereço HTTPS. O jeito mais simples é o GitHub Pages: suba este repositório e ative *Settings → Pages* apontando para a pasta `web` (ou use um repositório só com o conteúdo de `web/`).
+1. Publique a pasta `web/` num endereço HTTPS. O repositório já vem com a automação `.github/workflows/pages.yml`: em *Settings → Pages → Source*, escolha **GitHub Actions** e o app sai em `https://jvs2011.github.io/gta6-mapa-leonida/`. Numa conta gratuita, o GitHub Pages só funciona com o repositório **público**. Os dados têm licença aberta, então não há problema em deixá-lo público.
 2. No iPhone, abra o endereço no **Safari**, toque em **Compartilhar → Adicionar à Tela de Início**.
 3. Abra pelo ícone **Leonida**. O app abre em tela cheia, direto no mapa.
 4. Opcional: em *Filtros → Ajustes → Baixar mapa para usar sem internet* (cerca de 130 MB) o mapa inteiro fica no aparelho. Mesmo sem esse passo, tudo o que você já viu fica guardado no cache.
